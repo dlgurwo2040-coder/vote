@@ -5,75 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>다면평가자 선정 투표</title>
 <style>
-  body{margin:0;background:#f3f5f9;color:#1d2433;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;line-height:1.6}
-  .wrap{max-width:440px;margin:0 auto;padding:48px 16px;text-align:center}
-  .card{background:#fff;border:1px solid #e2e6ee;border-radius:16px;padding:28px 20px}
-  h1{font-size:20px;margin:0 0 8px}
-  p{color:#6b7385;font-size:14px;margin:0 0 4px}
-  .btn{display:block;margin-top:20px;padding:15px;border-radius:12px;background:#2f5bd3;color:#fff;font-weight:700;font-size:16px;text-decoration:none}
-  .btn.ghost{background:#eef1f7;color:#1d2433;margin-top:10px}
-  .help{margin-top:22px;font-size:13px;color:#6b7385;background:#f7f8fb;border-radius:10px;padding:12px;text-align:left}
-  .hidden{display:none}
+  html,body{margin:0;height:100%;background:#f3f5f9;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
+  body{display:flex;flex-direction:column}
+  .bar{flex:none;display:none;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#fff8e6;border-bottom:1px solid #f0dfb0;font-size:13px;color:#6b5a2a}
+  .bar.show{display:flex}
+  .bar a{flex:none;padding:7px 12px;border-radius:8px;background:#2f5bd3;color:#fff;font-weight:700;text-decoration:none;font-size:13px}
+  .bar button{flex:none;border:0;background:none;color:#998a5c;font-size:18px;padding:0 4px;cursor:pointer}
+  iframe{flex:1;width:100%;border:0;display:block;background:#f3f5f9}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1>다면평가자 선정 투표</h1>
-    <p id="status">투표 화면으로 이동하는 중입니다…</p>
-
-    <div id="kakaoBox" class="hidden">
-      <a id="btnExternal" class="btn" href="#">외부 브라우저로 투표 열기</a>
-      <a id="btnDirect" class="btn ghost" href="#">이 화면에서 그대로 열기</a>
-      <div class="help">
-        자동으로 넘어가지 않으면 위 버튼을 눌러 주세요.<br>
-        그래도 안 되면 화면 오른쪽 위 <b>⋮</b>(아이폰은 오른쪽 아래 <b>⋯</b>) 메뉴에서
-        <b>'다른 브라우저로 열기'</b> 또는 <b>'Safari로 열기'</b>를 선택해 주세요.
-      </div>
-    </div>
-  </div>
+<div id="bar" class="bar">
+  <span>화면이 안 보이면 →</span>
+  <a id="btnExternal" href="#">외부 브라우저로 열기</a>
+  <button id="btnClose" aria-label="닫기">×</button>
 </div>
+<iframe id="app" allow="clipboard-write" referrerpolicy="no-referrer"></iframe>
 
 <script>
-  // ▼▼▼ 여기에 Apps Script 웹앱 주소(/exec)를 넣으세요 ▼▼▼
+  // 기본 연결 주소 (고산초). 다른 학교는 ?id=배포ID 로 접속
   var TARGET = 'https://script.google.com/macros/s/AKfycbwO3z1ETOw02S7cu6riJRYEym3nP6N6I7qdWzv8_AGCIg0ttqWBfirzVDxLkn1nIcQX_A/exec';
-  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-  // 다른 학교용: ?id=배포ID 를 붙이면 그 학교 웹앱으로 연결 (구글 Apps Script 주소만 허용)
   var params = new URLSearchParams(location.search);
   var id = params.get('id');
   if (id && /^[A-Za-z0-9_-]{20,120}$/.test(id)) {
     TARGET = 'https://script.google.com/macros/s/' + id + '/exec';
   }
   params.delete('id');
-  // ?page=admin 등 나머지 값은 그대로 전달
   var rest = params.toString();
   var url = TARGET + (rest ? '?' + rest : '');
+
   var ua = navigator.userAgent || '';
   var isKakao = /KAKAOTALK/i.test(ua);
   var isAndroid = /Android/i.test(ua);
-  // 네이버·밴드·인스타그램·라인·페이스북 등 다른 인앱 브라우저
   var isOtherInApp = /NAVER\(inapp|BAND\/|Instagram|Line\/|FBAN|FBAV|DaumApps|everytimeApp/i.test(ua);
+  var isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
 
-  var external = isKakao
-    ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url)
-    : 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
-
-  if (isKakao || (isOtherInApp && isAndroid)) {
-    document.getElementById('status').textContent = '카카오톡 등 앱 안의 브라우저에서는 투표 화면이 열리지 않을 수 있어 외부 브라우저로 엽니다.';
-    document.getElementById('kakaoBox').classList.remove('hidden');
-    document.getElementById('btnExternal').href = external;
-    document.getElementById('btnDirect').href = url;
-    location.href = external;
-  } else if (isOtherInApp) {
-    // 아이폰의 기타 인앱 브라우저: 강제 전환 수단이 없어 안내만 표시
-    document.getElementById('status').textContent = '아래 안내에 따라 Safari로 열어 주세요.';
-    document.getElementById('kakaoBox').classList.remove('hidden');
-    document.getElementById('btnExternal').classList.add('hidden');
-    document.getElementById('btnDirect').href = url;
-  } else {
+  // PC 브라우저: 투표 화면으로 바로 이동 (안 열리면 시크릿 창 안내)
+  if (!isKakao && !isOtherInApp && !isMobile) {
     location.replace(url);
+  } else {
+    // 카톡·휴대폰: 이 페이지 안에 투표 화면을 띄움 (구글 다중 로그인 오류 회피)
+    document.getElementById('app').src = url;
   }
+
+  // 인앱 브라우저에서는 '외부 브라우저로 열기' 비상 버튼 표시
+  if (isKakao || (isOtherInApp && isAndroid)) {
+    document.getElementById('btnExternal').href = isKakao
+      ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url)
+      : 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;end';
+    document.getElementById('bar').classList.add('show');
+  }
+  document.getElementById('btnClose').onclick = function () {
+    document.getElementById('bar').classList.remove('show');
+  };
 </script>
 </body>
 </html>
